@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>一加计算器彩蛋动画</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.13.0/lottie.min.js"></script>
+    <style>
+        :root {
+            --bg-page: #f2f2f2;
+            --bg-container: #ffffff;
+            --text-color: #000000;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --color-red: #DB382C;
+            --bar-height-px: 12px;
+            --corner-radius: 9px;
+            --duration-slide: 0.367s;
+            --duration-expand: 0.8s;
+            --path-interpolator: cubic-bezier(0.17, 0.0, 0.1, 1.0);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg-page: #1e1e1e;
+                --bg-container: #333333;
+                --text-color: #ffffff;
+                --shadow-color: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        [data-theme="light"] {
+            --bg-page: #f2f2f2;
+            --bg-container: #ffffff;
+            --text-color: #000000;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-page: #1e1e1e;
+            --bg-container: #333333;
+            --text-color: #ffffff;
+            --shadow-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--bg-page);
+            color: var(--text-color);
+            font-family: sans-serif;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        .controls button {
+            padding: 10px 20px;
+            background-color: var(--bg-container);
+            color: var(--text-color);
+            border: 1px solid var(--shadow-color);
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px var(--shadow-color);
+        }
+        .controls button:hover {
+            opacity: 0.8;
+        }
+        .controls button.active {
+            border-color: var(--color-red);
+            font-weight: bold;
+            color: var(--color-red);
+        }
+
+        .easter-egg-container {
+            width: 100vw;
+            max-width: 1000px;
+            height: 85vh;
+            max-height: 1000px;
+            background-color: var(--bg-container);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 30px var(--shadow-color);
+            border-radius: 0;
+            transition: border-radius 0.3s, background-color 0.3s, box-shadow 0.3s;
+        }
+        .easter-egg-container.rounded {
+            border-radius: var(--corner-radius);
+        }
+        
+        .divider-bar {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: var(--bar-height-px);
+            background-color: var(--color-red);
+            transform: translateY(-50%) translateX(-100%);
+            z-index: 5;
+            transition: transform var(--duration-slide) var(--path-interpolator), opacity 0.5s;
+        }
+
+        .main-content {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background-color: var(--color-red);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(-50%) scaleY(0);
+            transform-origin: center center;
+            z-index: 10;
+            transition: transform var(--duration-expand) var(--path-interpolator), opacity 0.01s, border-radius 0.3s;
+            border-radius: 0;
+        }
+        .main-content.rounded {
+            border-radius: var(--corner-radius);
+        }
+
+        .divider-bar.slide-in {
+            transform: translateY(-50%) translateX(0);
+        }
+        .main-content.expand {
+            opacity: 1;
+            transform: translateY(-50%) scaleY(1);
+        }
+
+        .lottie-animation {
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.3s 0.8s;
+            transform: translateZ(0);
+        }
+        .main-content.expand .lottie-animation {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="controls">
+    <button id="e-false-btn" class="active">圆角</button>
+    <button id="e-true-btn">直角</button>
+    <button id="theme-toggle-btn">主题</button>
+    <button id="replay-btn">重新播放</button>
+</div>
+
+<div class="easter-egg-container" id="container">
+    <div class="main-content" id="main-content">
+        <div id="lottie-animation"></div>
+    </div>
+    <div class="divider-bar" id="divider-bar"></div>
+</div>
+
+<script>
+    const container = document.getElementById('container');
+    const dividerBar = document.getElementById('divider-bar');
+    const mainContent = document.getElementById('main-content');
+    const eFalseBtn = document.getElementById('e-false-btn');
+    const eTrueBtn = document.getElementById('e-true-btn');
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const replayBtn = document.getElementById('replay-btn');
+    
+    let anim;
+    let currentTheme = 'auto';
+    
+    function loadLottie() {
+        anim = lottie.loadAnimation({
+            container: document.getElementById('lottie-animation'),
+            renderer: 'canvas', 
+            loop: false,
+            autoplay: false,
+            path: 'never_settle_animation.json', 
+            rendererSettings: {
+                preserveAspectRatio: 'xMidYMid meet' 
+            }
+        });
+    }
+
+    function resetAnimationState() {
+        dividerBar.style.transition = 'none';
+        mainContent.style.transition = 'none';
+        
+        dividerBar.classList.remove('slide-in');
+        mainContent.classList.remove('expand');
+        dividerBar.style.opacity = '1';
+        
+        if (anim) {
+            anim.goToAndStop(0, true);
+        }
+        
+        void container.offsetWidth;
+
+        dividerBar.style.transition = '';
+        mainContent.style.transition = '';
+    }
+    
+    function startAnimation() {
+        resetAnimationState();
+
+        setTimeout(() => {
+            dividerBar.classList.add('slide-in');
+
+            const slideEndHandler = () => {
+                dividerBar.removeEventListener('transitionend', slideEndHandler);
+                mainContent.classList.add('expand');
+                
+                if (anim) {
+                    anim.play();
+                }
+            };
+            dividerBar.addEventListener('transitionend', slideEndHandler);
+        }, 20);
+    }
+
+    function setRounding(isRounded) {
+        if (isRounded) {
+            container.classList.add('rounded');
+            mainContent.classList.add('rounded');
+            eFalseBtn.classList.add('active');
+            eTrueBtn.classList.remove('active');
+        } else {
+            container.classList.remove('rounded');
+            mainContent.classList.remove('rounded');
+            eTrueBtn.classList.add('active');
+            eFalseBtn.classList.remove('active');
+        }
+    }
+
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    function getSystemTheme() {
+        return systemPrefersDark.matches ? 'dark' : 'light';
+    }
+
+    function applyTheme() {
+        let appliedTheme = currentTheme;
+        if (currentTheme === 'auto') {
+            appliedTheme = getSystemTheme();
+            themeToggleBtn.textContent = `自动${appliedTheme === 'dark' ? '深' : '浅'}`;
+        } else {
+            themeToggleBtn.textContent = `${currentTheme === 'dark' ? '深' : '浅'}`;
+        }
+        document.documentElement.setAttribute('data-theme', appliedTheme);
+    }
+
+    function toggleTheme() {
+        if (currentTheme === 'auto') {
+            currentTheme = getSystemTheme() === 'dark' ? 'light' : 'dark';
+        } else if (currentTheme === 'light') {
+            currentTheme = 'dark';
+        } else if (currentTheme === 'dark') {
+            currentTheme = 'auto';
+        }
+        applyTheme();
+    }
+    
+    systemPrefersDark.addListener(applyTheme);
+
+    eFalseBtn.addEventListener('click', () => setRounding(true));
+    eTrueBtn.addEventListener('click', () => setRounding(false));
+    replayBtn.addEventListener('click', startAnimation);
+    themeToggleBtn.addEventListener('click', toggleTheme);
+
+    window.onload = () => {
+        loadLottie();
+        setRounding(true);
+        applyTheme();
+        startAnimation();
+    };
+</script>
+</body>
+</html>
